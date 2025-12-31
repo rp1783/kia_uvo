@@ -129,6 +129,16 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                     self.vehicle_manager.check_and_force_update_vehicles,
                     self.force_refresh_interval,
                 )
+            except KeyError as key_error:
+                _LOGGER.error(
+                    f"API response missing expected key '{key_error}'. "
+                    f"This is a known issue with some USA Hyundai vehicles (especially 2020 Sonatas). "
+                    f"The Hyundai BlueLink API is not returning vehicle data in the expected format. "
+                    f"Skipping this update cycle. If this persists, please report to: "
+                    f"https://github.com/Hyundai-Kia-Connect/hyundai_kia_connect_api/issues"
+                )
+                # Don't retry cached update if we're getting malformed responses
+                return self.data
             except Exception:
                 try:
                     _LOGGER.exception(
@@ -137,6 +147,12 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                     await self.hass.async_add_executor_job(
                         self.vehicle_manager.update_all_vehicles_with_cached_state
                     )
+                except KeyError as key_error:
+                    _LOGGER.error(
+                        f"Cached update also failed - API response missing key '{key_error}'. "
+                        f"The Hyundai BlueLink API is not returning data correctly for your vehicle."
+                    )
+                    return self.data
                 except Exception:
                     _LOGGER.exception(f"Cached update failed: {traceback.format_exc()}")
                     raise UpdateFailed(
@@ -144,9 +160,17 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                     )
 
         else:
-            await self.hass.async_add_executor_job(
-                self.vehicle_manager.update_all_vehicles_with_cached_state
-            )
+            try:
+                await self.hass.async_add_executor_job(
+                    self.vehicle_manager.update_all_vehicles_with_cached_state
+                )
+            except KeyError as key_error:
+                _LOGGER.error(
+                    f"Cached update failed - API response missing key '{key_error}'. "
+                    f"The Hyundai BlueLink API is not returning data correctly for your vehicle. "
+                    f"This is a known issue with some USA Hyundai vehicles."
+                )
+                return self.data
 
         return self.data
 
