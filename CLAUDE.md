@@ -217,3 +217,51 @@ self.vehicle.VIN
 - Always handle authentication errors by raising `ConfigEntryAuthFailed`
 - Services must validate required parameters and log errors for missing values
 - Region/brand compatibility varies - check upstream API documentation for feature support
+
+## Known Issues and Troubleshooting
+
+### Hyundai USA API Error 502 - "HATA remoteVehicleStatus service failed"
+
+**Symptoms:**
+- Integration loads but only 4 entities are created
+- Lock, device tracker, and most sensors show "unknown" state
+- Error in logs: `KeyError: 'vehicleStatus'`
+- API response shows: `{"errorCode": 502, "errorMessage": "We're sorry, but we could not complete your request. Please try again later."}`
+
+**Root Cause:**
+The Hyundai BlueLink API returns error 502 when attempting to fetch vehicle status. This is a **server-side issue**, not a code bug. Common scenarios:
+- New trial subscriptions that just started (services may take 24-48 hours to provision)
+- Hyundai backend "HATA remoteVehicleStatus" service is temporarily down
+- Vehicle remote services not fully activated despite enrollment being complete
+
+**Entities Created Without vehicleStatus:**
+These are always created and work from enrollment data:
+- `sensor.{vehicle}_data` - VehicleEntity showing all raw vehicle data
+- `sensor.{vehicle}_vehicle_identification_number` - VIN from enrollment
+- `lock.{vehicle}_door_lock` - Created but state unknown without vehicleStatus
+- `device_tracker.{vehicle}_location` - Created but state unknown without vehicleStatus
+
+**Entities Requiring vehicleStatus (won't be created until API works):**
+- All other sensors (odometer, battery, doors, windows, etc.)
+- All binary sensors
+- Most number entities
+
+**Diagnosis:**
+Enable debug logging and check for the API response structure:
+```yaml
+logger:
+  logs:
+    custom_components.kia_uvo: debug
+    hyundai_kia_connect_api: debug
+```
+
+Look for the `get_vehicle_status response` in logs. If it shows `errorCode: 502`, the issue is server-side.
+
+**Resolution:**
+- Wait 24-48 hours after subscription enrollment/activation
+- Verify the official Hyundai BlueLink app can fetch real-time vehicle data
+- If issue persists beyond 48 hours, contact Hyundai BlueLink support
+- The coordinator now handles these errors gracefully and won't crash the integration
+
+### Version History
+- 2.47.6: Updated to use `hyundai_kia_connect_api==3.52.0`, added KeyError handling for 502 responses
