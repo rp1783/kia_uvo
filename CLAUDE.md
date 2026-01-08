@@ -229,10 +229,12 @@ self.vehicle.VIN
 - API response shows: `{"errorCode": 502, "errorMessage": "We're sorry, but we could not complete your request. Please try again later."}`
 
 **Root Cause:**
-The Hyundai BlueLink API returns error 502 when attempting to fetch vehicle status. This is a **server-side issue**, not a code bug. Common scenarios:
+The Hyundai BlueLink API returns error 502 when attempting to fetch vehicle status. This is typically caused by:
+- **Vehicle telematics module (TMU) is asleep** - Most common cause. The TMU goes to sleep after ~4 hours of inactivity
+- Opening the official BlueLink app wakes the vehicle and resolves the issue
+- Force refresh may not reliably wake older vehicles (2020 models)
 - New trial subscriptions that just started (services may take 24-48 hours to provision)
 - Hyundai backend "HATA remoteVehicleStatus" service is temporarily down
-- Vehicle remote services not fully activated despite enrollment being complete
 
 **Entities Created Without vehicleStatus:**
 These are always created and work from enrollment data:
@@ -258,10 +260,15 @@ logger:
 Look for the `get_vehicle_status response` in logs. If it shows `errorCode: 502`, the issue is server-side.
 
 **Resolution:**
-- Wait 24-48 hours after subscription enrollment/activation
-- Verify the official Hyundai BlueLink app can fetch real-time vehicle data
-- If issue persists beyond 48 hours, contact Hyundai BlueLink support
+- **Open the official Hyundai BlueLink app** - This wakes up the vehicle's telematics module
+- Drive the vehicle - The TMU wakes up when the car is running
+- Wait for the next scheduled force update - The integration will retry automatically
+- Increase force update frequency (but this may drain the 12v battery faster)
 - The coordinator now handles these errors gracefully and won't crash the integration
+- If issue persists even when vehicle is awake, contact Hyundai BlueLink support
+
+**Workaround for Sleeping Vehicles:**
+The integration's force update feature should wake the vehicle, but this doesn't work reliably on older models (2020 Sonatas). The API returns 502 instead of waking the vehicle or returning last known cached data. This is a limitation of the Hyundai backend API, not the integration.
 
 ### Version History
 - 2.47.6: Updated to use `hyundai_kia_connect_api==3.52.0`, added KeyError handling for 502 responses

@@ -130,12 +130,11 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                     self.force_refresh_interval,
                 )
             except KeyError as key_error:
-                _LOGGER.error(
+                _LOGGER.warning(
                     f"API response missing expected key '{key_error}'. "
-                    f"This is a known issue with some USA Hyundai vehicles (especially 2020 Sonatas). "
-                    f"The Hyundai BlueLink API is not returning vehicle data in the expected format. "
-                    f"Skipping this update cycle. If this persists, please report to: "
-                    f"https://github.com/Hyundai-Kia-Connect/hyundai_kia_connect_api/issues"
+                    f"This usually means the vehicle's telematics module is asleep. "
+                    f"Opening the Hyundai BlueLink app on your phone will wake it up. "
+                    f"Skipping this update cycle and will retry on the next scheduled update."
                 )
                 # Don't retry cached update if we're getting malformed responses
                 return self.data
@@ -148,9 +147,9 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                         self.vehicle_manager.update_all_vehicles_with_cached_state
                     )
                 except KeyError as key_error:
-                    _LOGGER.error(
+                    _LOGGER.warning(
                         f"Cached update also failed - API response missing key '{key_error}'. "
-                        f"The Hyundai BlueLink API is not returning data correctly for your vehicle."
+                        f"Vehicle telematics may be asleep. Open the BlueLink app to wake it."
                     )
                     return self.data
                 except Exception:
@@ -165,10 +164,9 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator):
                     self.vehicle_manager.update_all_vehicles_with_cached_state
                 )
             except KeyError as key_error:
-                _LOGGER.error(
+                _LOGGER.warning(
                     f"Cached update failed - API response missing key '{key_error}'. "
-                    f"The Hyundai BlueLink API is not returning data correctly for your vehicle. "
-                    f"This is a known issue with some USA Hyundai vehicles."
+                    f"Vehicle telematics may be asleep. Open the BlueLink app to wake it."
                 )
                 return self.data
 

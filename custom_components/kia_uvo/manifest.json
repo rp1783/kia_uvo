@@ -1,7 +1,7 @@
 {
   "domain": "kia_uvo",
   "name": "Kia Uvo / Hyundai Bluelink",
-  "codeowners": ["@fuatakgun"],
+  "codeowners": ["@rp1783],
   "config_flow": true,
   "documentation": "https://github.com/Hyundai-Kia-Connect/kia_uvo",
   "integration_type": "hub",
